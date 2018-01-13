@@ -1,5 +1,5 @@
 module tools
-    real*8, parameter :: pi = 3.141592653589793d0
+    real*8, parameter :: pi = 3.141592653589793238d0
     contains
     function genFM(n)    ! 用来产生 N 阶傅里叶矩阵
         integer*4 :: n, k, j
