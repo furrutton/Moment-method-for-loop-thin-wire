@@ -10,7 +10,7 @@ module commoninfo
     real*8, parameter :: a = b/10000    ! 细线半径 假设远远小于细线环半径
     real*8, parameter :: ita = 120.d0*pi! 真空波阻抗
     real*8, parameter :: k = 2.0d0*pi/lambda    ! 波数
-    complex*16 :: j = (0.0d0, 1.0d0)
+    complex*16, parameter :: j = (0.0d0, 1.0d0)
 end module commoninfo
 
 
@@ -62,7 +62,7 @@ module tools
         use commoninfo
         implicit none
         integer*4 :: m, n, rows, cols
-        complex*16, external :: func1! 被积函数
+        complex*16, external :: func1   ! 被积函数
         real*8 :: delta, phi_n, phi_m
         complex*16 :: genZMN(m, n)
         real*8 :: r1, r2, r3, lb, ub
@@ -100,6 +100,7 @@ module tools
             ub = phi_i+delta/2.0d0
             genB(i) = gauss(Ei, lb, ub)
         enddo
+        write(unit=*, fmt=*) "function genB(n) SUCCED!!"
     end function genB
 
     function genFM(n)    ! 用来产生 N 阶傅里叶矩阵
@@ -133,9 +134,9 @@ module tools
         Mat_Vec_FFT = temp(1:N)
     end function Mat_Vec_FFT
 
-    function rcg_fft(ca, cy, cx, n)
-        integer*4, parameter :: mxiter = 2000   ! 允许的最大迭代次数
-        real*8 ,parameter :: err = 1.0d-16       ! 设定的容许误差
+    function rcg_fft(ca, cy, cx, n)             ! cg with fft & ifft method
+        integer*4, parameter :: mxiter = 200    ! 允许的最大迭代次数
+        real*8 ,parameter :: err = 1.0d-16      ! 设定的容许误差
         integer*4 :: iter, n
         complex*16 :: ca(n, n), cx(n), cy(n)
         real*8 :: ak, ay, ek, qk, sk, sk2
@@ -168,50 +169,11 @@ module tools
             endif
         enddo
         ! close(11)
-        write(unit=*, fmt=*) iter
+        write(unit=*, fmt=*) "converged step by: ", iter
         rcg_fft = cx
+        write(unit=*, fmt=*) "function rcg_fft(n) SUCCED!!"
         return
     end function rcg_fft
-
-    function rcg(ca, cy, cx, n)
-        integer*4, parameter :: mxiter = 2000   ! 允许的最大迭代次数
-        real*8 ,parameter :: err = 1.0d-16       ! 设定的容许误差
-        integer*4 :: iter, n
-        complex*16 :: ca(n, n), cx(n), cy(n)
-        real*8 :: ak, ay, ek, qk, sk, sk2
-        complex*16 :: cp(n), cprod(n), cr(n), rcg(N)
-        iter = 0
-        ay = dble(dot_product(cy, cy))
-        cprod = matmul(ca, cx)
-        cr = cy - cprod
-        cp = matmul(transpose(conjg(ca)), cr)
-        sk = dble(dot_product(cp, cp))
-        ! open(11, file='text.csv')
-        do while(iter .lt. mxiter)
-            cprod = matmul(ca, cp)
-            ak = dble(dot_product(cprod, cprod))
-            ak = sk/ak
-            cx = cx + ak*cp
-            cr = cr - ak*cprod
-            ek = dble(dot_product(cr, cr))
-            ! write(unit=11, fmt=*) dsqrt(ek/ay), cx
-            if(dsqrt(ek/ay) .le. err) exit
-            cprod = matmul(transpose(conjg(ca)), cr)
-            sk2 = dble(dot_product(cprod, cprod))
-            qk = sk2/sk
-            cp = cprod + qk*cp
-            sk = sk2
-            iter = iter+1
-            if(iter .ge. mxiter)then
-                write(unit=*, fmt=*) "beyound limitation, not converged!"
-                exit
-            endif
-        enddo
-        ! close(11)
-        write(unit=*, fmt=*) iter
-        rcg = cx
-        return
-    end function rcg   
 
 end module tools
 
@@ -219,8 +181,8 @@ program main
     use commoninfo
     use tools
     implicit none
-    integer*4, parameter :: n=8
-    integer*4, parameter :: m=8
+    integer*4, parameter :: n=128
+    integer*4, parameter :: m=128
     integer*4 :: i
     complex*16, allocatable :: Zmn(:,:), rB(:), An(:), x0(:)
     real*8 :: start, finish
@@ -230,11 +192,13 @@ program main
     allocate(rB(n))
     allocate(An(n))
     allocate(x0(n))
-    x0 = (0.0d0, 0.0d0)
-    Zmn = genZMN( func1, m, n)
-    rB = genB(Ei, n)
-    An = rcg_fft(Zmn, rB, x0, n)
+    x0 = (0.0d0, 0.0d0)             ! 给定初始的迭代向量
+    Zmn = genZMN( func1, m, n)      ! Zmn为阻抗矩阵
+    rB = genB(Ei, n)                ! rB 表示右端向量
+    An = rcg_fft(Zmn, rB, x0, n)    ! An 是展开系数
 
+    ! write(unit=*, fmt=*) matmul(Zmn, An)-rB   ! 在-15次以内
+    
     open(11, file='Zmn.txt')
     open(12, file='RightB.txt')
     open(13, file='An.txt')
@@ -242,6 +206,7 @@ program main
     do i = 1, n
         write(unit=11, fmt=*) Zmn(i, :)
         write(unit=12, fmt=*) rB(i)
+        ! write(unit=13, fmt=*) 20.0*dlog10( dsqrt(dble(An(i)*conjg(An(i)))))   ! dB 输出
         write(unit=13, fmt=*) An(i)
     enddo
 
