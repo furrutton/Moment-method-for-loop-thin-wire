@@ -5,7 +5,7 @@ module commoninfo
     real*8, parameter :: omega = 2*pi*freq ! 角频率
     real*8, parameter :: vcc = 3.0d8    ! 光速
     real*8, parameter :: lambda = vcc/freq ! 波长
-    real*8, parameter :: zhouchang = 100.0d0*lambda     ! 圆环周长
+    real*8, parameter :: zhouchang = 400.0d0*lambda     ! 圆环周长
     real*8, parameter :: b = zhouchang/pi/2.0d0! 圆环半径
     real*8, parameter :: a = b/10000    ! 细线半径 假设远远小于细线环半径
     real*8, parameter :: ita = 120.d0*pi! 真空波阻抗
@@ -19,7 +19,7 @@ module tools
     contains
 
 ! ---------------------------- zmn 的被积函数 ----------------------------
-    function func1(x)   
+    function func1(x)
         complex*16 :: func1
         real*8 :: r, x  ! x 代表 phim - phi'
         r = b*dsqrt(4.0d0*dsin(x/2.0d0)**2.0d0+(a/b)**2.0d0)
@@ -42,7 +42,7 @@ module tools
         real*8 :: node(12), w(12), t(12)
         data node / -0.981560634246732d0, -0.904117256370452d0, -0.7699026741943177d0, -0.5873179542866143d0,   &
                 &   -0.3678314989981804d0, -0.12523340851114688d0, 0.12523340851114688d0, 0.3678314989981804d0, &
-                &   0.5873179542866143d0, 0.7699026741943177d0, 0.904117256370452d0, 0.981560634246732d0 / 
+                &   0.5873179542866143d0, 0.7699026741943177d0, 0.904117256370452d0, 0.981560634246732d0 /
         data w / 0.04717533638647547d0, 0.1069393259953637d0, 0.1600783285433586d0, 0.2031674267230672d0,       &
                 &   0.2334925365383534d0, 0.2491470458134027d0, 0.2491470458134027d0, 0.2334925365383534d0,     &
                 &   0.2031674267230672d0, 0.1600783285433586d0, 0.1069393259953637d0, 0.04717533638647547d0 /
@@ -176,27 +176,28 @@ program main
     use commoninfo
     use tools
     implicit none
-    integer*4, parameter :: n=128
-    integer*4, parameter :: m=128
+    integer*4, parameter :: n=256
+    integer*4, parameter :: m=256
     integer*4 :: i
     complex*16, allocatable :: Zmn(:,:), rB(:), An(:), x0(:)
     real*8 :: start, finish
     call cpu_time(start)    ! 计时开始
 
 ! ----------------- 分配空间 -----------------
-    allocate(Zmn(n, n))             ! Zmn为阻抗矩阵            
+    allocate(Zmn(n, n))             ! Zmn为阻抗矩阵
     allocate(rB(n))                 ! rB 表示右端向量
     allocate(An(n))                 ! An 是展开系数
     allocate(x0(n))                 ! 给定初始的迭代向量
 
 ! ----------------------- 计算过程 -------------------------
-    x0 = (0.0d0, 0.0d0)             
-    Zmn = genZMN(func1, m, n)       
-    rB = genB(Ei, n)                
-    An = rcg_fft(Zmn, rB, x0, n)    
+    x0 = (0.0d0, 0.0d0)
+    Zmn = genZMN(func1, m, n)
+    rB = genB(Ei, n)
+    An = rcg_fft(Zmn, rB, x0, n)
     ! write(unit=*, fmt=*) matmul(Zmn, An)-rB   ! 在-15次以内
 
-! ----------------- 存储计算结果 ------------------------   
+    call cpu_time(finish)       ! 计时结束
+! ----------------- 存储计算结果 ------------------------
     open(11, file='Zmn.txt')
     open(12, file='RightB.txt')
     open(13, file='An.txt')
@@ -213,7 +214,7 @@ program main
     close(14)
 ! ------------------------------------------------------
 
-    call cpu_time(finish)       ! 计时结束
+
     write(unit=*, fmt=*) "time elapsed: ", finish-start ! 输出 cpu 耗时
     stop
 end program main
