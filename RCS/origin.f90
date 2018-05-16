@@ -2,7 +2,7 @@
 ! 常量定义
 ! -----------------------------------------------------------------------------------
 module constants
-  real*8, parameter       :: pi = 3.141592653589793238d0
+  real*8, parameter       :: pi = 4.0d0*datan(1.0d0)
   real*8, parameter       :: freq = 3.0d9                   ! 频率
   real*8, parameter       :: omega = 2*pi*freq              ! 角频率
   real*8, parameter       :: vcc = 3.0d8                    ! 光速
@@ -15,12 +15,8 @@ module constants
   real*8, parameter       :: ita = 120.d0*pi                ! 真空波阻抗
   real*8, parameter       :: k = 2.0d0*pi/lambda            ! 波数
   complex*16, parameter   :: j = (0.0d0, 1.0d0)             ! 虚数单位
-
   integer*4, parameter    :: n = 2**11                      ! 分段数 >>>>>>>>>>>>>>>>>>>>>> n
-
   real*8, parameter       :: delta = 2.0d0*pi/n             ! 分段间隔 delta
-
-
   real*8, parameter       :: theta = pi/2.0d0               !
 end module constants
 ! -----------------------------------------------------------------------------------
@@ -63,7 +59,7 @@ contains
     real*8      :: r, x
 
     r = b*dsqrt(4.0d0*dsin(x/2.0d0)**2.0d0+(a/b)**2.0d0)
-    ans = exp(-j*k*r)*dcos(x)/(4.0d0*pi*r)
+    ans = cdexp(-j*k*r)*dcos(x)/(4.0d0*pi*r)
 
     return
   end function f1
@@ -76,7 +72,7 @@ contains
     real*8      :: phi
     complex*16  :: ans
 
-    ans = dcos(phi)*exp(-j*k*b*dcos(phi))*b
+    ans = dcos(phi)*cdexp(-j*k*b*dcos(phi))*b
 
     return
   end function Ei
@@ -125,7 +121,7 @@ contains
 
     gauss = (0.0d0, 0.0d0)
     do i = 1, 12, 1
-      gauss = gauss + exp(j*k*b*dcos(phi-t(i)))*w(i)
+      gauss = gauss + cdexp(j*k*b*dcos(phi-t(i)))*w(i)
     end do
     gauss = gauss*(u-l)/2.0d0
     return
@@ -150,9 +146,9 @@ contains
         r1 = b*dsqrt(4.0d0*dsin((phi_m-phi_n)/2.0d0)**2.0d0+(a/b)**2.0d0)
         r2 = b*dsqrt(4.0d0*dsin((phi_m-phi_n-delta)/2.0d0)**2.0d0+(a/b)**2.0d0)
         r3 = b*dsqrt(4.0d0*dsin((phi_m-phi_n+delta)/2.0d0)**2.0d0+(a/b)**2.0d0)
-        t1 = 2.0d0*exp(-j*k*r1)/(4.0d0*pi*r1)
-        t2 = exp(-j*k*r2)/(4.0d0*pi*r2)
-        t3 = exp(-j*k*r3)/(4.0d0*pi*r3)
+        t1 = 2.0d0*cdexp(-j*k*r1)/(4.0d0*pi*r1)
+        t2 = cdexp(-j*k*r2)/(4.0d0*pi*r2)
+        t3 = cdexp(-j*k*r3)/(4.0d0*pi*r3)
         l = phi_n-phi_m-delta/2.0d0
         u = phi_n-phi_m+delta/2.0d0
         ans(rows, cols) = -j*k*ita*b**2*delta*Gauss1d(func, l, u)-(j*ita/k)*(t1-t2-t3)
@@ -209,7 +205,7 @@ contains
 
 
     do i = 1, n/2, 1
-      t        = exp(-2.0d0*j*pi*(i-1)/n)*even(i)
+      t        = cdexp(-2.0d0*j*pi*(i-1)/n)*even(i)
       x(i)     = odd(i)+t
       x(i+n/2) = odd(i)-t
     end do
@@ -324,10 +320,10 @@ program main
   ! 判断 n 的取值是否为 2 的幂次
   ! 如果不是 2 的指数次则提示错误退出程序
   ! ------------------------------------------------------
-    if ( mod(n, 2) .ne. 0 ) then
-      write(unit=*, fmt=*) "N SET ERROR!!!"
-      goto 100
-    end if
+  if ( mod(n, 2) .ne. 0 ) then
+    write(unit=*, fmt=*) "N SET ERROR!!!"
+    goto 100
+  end if
   ! ------------------------------------------------------
 
   call cpu_time(start)            ! 开始计时
